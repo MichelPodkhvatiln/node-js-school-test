@@ -4,5 +4,15 @@
   "main": "index.js",
   "repository": "git@github.com:MichelPodkhvatiln/node-js-school-test.git",
   "author": "MichelPodkhvatiln <podkhvatilin.work@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "dev": "nodemon src/server.ts",
+    "build": "rm -rf build/ && prettier --write src/ && tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^16.6.1",
+    "nodemon": "^2.0.12",
+    "ts-node": "^10.2.0",
+    "typescript": "^4.3.5"
+  }
 }
