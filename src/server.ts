@@ -1,34 +1,8 @@
-import * as http from "http"
+import * as http from 'http'
+import { getRequestData } from "./helpers"
 
-const todos = [
-    {
-        id          : '1',
-        title       : 'First todo',
-        description :
-            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum luctus dolor sit amet orci vulputate malesuada. Lorem ipsum dolor sit.'
-    },
-    {
-        id          : '2',
-        title       : 'Second todo',
-        description :
-            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum luctus dolor sit amet orci vulputate malesuada. Lorem ipsum dolor sit.'
-    },
-    {
-        id          : '3',
-        title       : 'Third todo',
-        description :
-            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum luctus dolor sit amet orci vulputate malesuada. Lorem ipsum dolor sit.'
-    }
-]
-
-async function getRequestData (req: http.IncomingMessage) {
-    const buffers = [];
-
-    for await (const chunk of req) {
-        buffers.push(chunk);
-    }
-
-    return  Buffer.concat(buffers).toString()
+const db = {
+    users: []
 }
 
 const server = http.createServer( async (req, res) => {
@@ -37,15 +11,19 @@ const server = http.createServer( async (req, res) => {
         const data = JSON.parse(rawData)
         console.log(data)
 
+        // @ts-ignore
+        db.users.push(data)
+
+        console.log(db)
+
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify(todos))
+        res.end(JSON.stringify({ db }))
     }
     else if (req.url?.match(/\/user\/([\d]+)/) && req.method === 'GET') {
         const id = req.url.split('/')[2]
-        const todo = todos.find((todo) => todo.id === id)
 
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify(todo))
+        res.end(JSON.stringify({ message: 'Hello 2!' }))
     }
     else {
         res.writeHead(404, { 'Content-Type': 'application/json' })
