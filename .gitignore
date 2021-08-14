@@ -117,3 +117,4 @@ dist
 
 #WebStorm
 .idea
+/src/db/db.stormdb
