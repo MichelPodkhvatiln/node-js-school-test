@@ -21,8 +21,22 @@ const todos = [
     }
 ]
 
-const server = http.createServer( (req, res) => {
+async function getRequestData (req: http.IncomingMessage) {
+    const buffers = [];
+
+    for await (const chunk of req) {
+        buffers.push(chunk);
+    }
+
+    return  Buffer.concat(buffers).toString()
+}
+
+const server = http.createServer( async (req, res) => {
     if (req.url === '/create-user' && req.method === 'POST') {
+        const rawData = await getRequestData(req)
+        const data = JSON.parse(rawData)
+        console.log(data)
+
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify(todos))
     }
