@@ -1,38 +1,18 @@
 import http from 'http'
-import util, {log} from 'util'
 import { join } from 'path'
 import multiparty from 'multiparty'
-
 import isEmail from 'validator/lib/isEmail'
 import isEmpty from 'validator/lib/isEmpty'
 import { v4 as uuidv4 } from 'uuid'
-
-type CreateUserFields = {
-    firstName?: string[],
-    lastName?: string[],
-    email?: string[],
-}
-
-type CreateUserFiles = {
-    profilePhoto?: UploadedFileType[],
-}
-
-type UploadedFileType = {
-    fieldName: string,
-    originalFilename: string,
-    path: string,
-    headers: Record<string, string>,
-    size: number
-}
+import sharp from 'sharp'
+import { DatabaseFields, db } from "./db";
+import { CreateUserFields, CreateUserFiles, UserProfile } from "./interfaces";
 
 const EMPTY_STRING = ''
 
 const server = http.createServer( async (req, res) => {
     if (req.url === '/create-user' && req.method === 'POST') {
-        const form = new multiparty.Form({
-            // autoFiles: true,
-            // uploadDir: join(__dirname, './storage')
-        })
+        const form = new multiparty.Form()
 
         form.parse(req, (
             err,
@@ -80,44 +60,59 @@ const server = http.createServer( async (req, res) => {
             }
 
             const userId = uuidv4()
-            const userProfilePhotoLink = `/storage/${userId}_${profilePhoto[0].originalFilename}`
-            const userProfilePhotoPath = join(__dirname, userProfilePhotoLink)
+            const userProfilePhotoPath = join(__dirname, `/storage/images/${userId}_${profilePhoto[0].originalFilename}`)
 
-            // gm(profilePhoto[0].path)
-            //     .resize(200, 200, '^')
-            //     .gravity('Center')
-            //     .crop(200, 200)
-            //     .write(userProfilePhotoPath, (err) => {
-            //         if(err) {
-            //             console.log(err)
-            //
-            //             res.writeHead(500, { 'Content-Type': 'application/json' })
-            //             res.end(JSON.stringify({ message: 'Saving image error!' }))
-            //             return
-            //         }
-            //
-            //         const userProfileInfo = {
-            //             id: userId,
-            //             firstName: profileInfo.firstName[0],
-            //             lastName: profileInfo.lastName[0],
-            //             email: profileInfo.email[0],
-            //         }
-            //
-            //         res.writeHead(200, { 'content-type': 'text/plain' })
-            //         res.end(JSON.stringify({ message: `Success! New user ID: ${userId}` }))
-            //     })
+            const users: UserProfile[]  =  db.get(DatabaseFields.USERS).value()
+            const alreadyExistingUser = users.find((user)=> user.email === profileInfo.email[0])
 
-            res.writeHead(200, { 'content-type': 'text/plain' })
-            res.end(JSON.stringify({ message: `Success! New user ID: ${userId}` }))
+            if (alreadyExistingUser) {
+                res.writeHead(403, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ message: 'User already exist!.' }))
+                return
+            }
+
+            sharp(profilePhoto[0].path)
+                .resize(200, 200)
+                .toFile(userProfilePhotoPath)
+                .then(() => {
+                    const userProfileInfo = {
+                        id: userId,
+                        profilePhoto: userProfilePhotoPath,
+                        firstName: profileInfo.firstName[0],
+                        lastName: profileInfo.lastName[0],
+                        email: profileInfo.email[0],
+                    }
+
+                    db.get(DatabaseFields.USERS).push(userProfileInfo)
+                    db.save()
+
+                    res.writeHead(200, { 'content-type': 'text/plain' })
+                    res.end(JSON.stringify({ message: `Success! New user ID: ${userId}` }))
+                })
+                .catch((err) => {
+                    console.log(err)
+
+                    res.writeHead(500, { 'Content-Type': 'application/json' })
+                    res.end(JSON.stringify({ message: 'Saving image error!' }))
+                })
         })
         return
     }
 
     if (req.url?.match(/\/user\/([\d]+)/) && req.method === 'GET') {
         const id = req.url.split('/')[2]
+        const users: UserProfile[]  =  db.get(DatabaseFields.USERS).value()
+
+        const user = users.find((user) => user.id === id)
+
+        if(!user){
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ message: 'User not found!' }))
+            return
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ message: 'Hello 2!' }))
+        res.end(JSON.stringify({ data: user }))
         return
     }
 
