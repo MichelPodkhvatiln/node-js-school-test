@@ -117,3 +117,6 @@ dist
 
 #WebStorm
 .idea
+/src/db/db.stormdb
+/src/storage/ebd42d02-7883-47e7-981a-92108e9651e9_test_image.png
+/src/storage/images/
